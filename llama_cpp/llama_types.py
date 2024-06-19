@@ -6,6 +6,7 @@ Based on the OpenAI OpenAPI specification:
 https://github.com/openai/openai-openapi/blob/master/openapi.yaml
 
 """
+
 from typing import Any, List, Optional, Dict, Union
 from typing_extensions import TypedDict, NotRequired, Literal
 
@@ -134,6 +135,7 @@ class ChatCompletionStreamResponseChoice(TypedDict):
     ]
     finish_reason: Optional[Literal["stop", "length", "tool_calls", "function_call"]]
     logprobs: NotRequired[Optional[CompletionLogprobs]]
+    usage: Optional[CompletionUsage]
 
 
 class CreateChatCompletionStreamResponse(TypedDict):
@@ -156,7 +158,9 @@ class ChatCompletionFunctionCallOption(TypedDict):
 
 class ChatCompletionRequestResponseFormat(TypedDict):
     type: Literal["text", "json_object"]
-    schema: NotRequired[JsonType] # https://docs.endpoints.anyscale.com/guides/json_mode/
+    schema: NotRequired[
+        JsonType
+    ]  # https://docs.endpoints.anyscale.com/guides/json_mode/
 
 
 class ChatCompletionRequestMessageContentPartText(TypedDict):
