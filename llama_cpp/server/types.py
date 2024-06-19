@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Any
 from typing_extensions import TypedDict, Literal
 
 from pydantic import BaseModel, Field
@@ -52,6 +52,11 @@ stop_field = Field(
 stream_field = Field(
     default=False,
     description="Whether to stream the results as they are generated. Useful for chatbots.",
+)
+
+include_usage = Field(
+    default=False,
+    description="If set, an additional chunk will be streamed before the data: [DONE] message. The usage field on this chunk shows the token usage statistics for the entire request, and the choices field will always be an empty array. All other chunks will also include a usage field, but with a null value.",
 )
 
 top_k_field = Field(
@@ -127,6 +132,12 @@ class CreateCompletionRequest(BaseModel):
     )
     stop: Optional[Union[str, List[str]]] = stop_field
     stream: bool = stream_field
+
+    stream_options: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Options for streaming response. Only set this when you set stream: true.",
+    )
+
     logprobs: Optional[int] = Field(
         default=None,
         ge=0,
@@ -216,7 +227,7 @@ class CreateChatCompletionRequest(BaseModel):
     min_tokens: int = min_tokens_field
     logprobs: Optional[bool] = Field(
         default=False,
-        description="Whether to output the logprobs or not. Default is True"
+        description="Whether to output the logprobs or not. Default is True",
     )
     top_logprobs: Optional[int] = Field(
         default=None,
@@ -228,6 +239,10 @@ class CreateChatCompletionRequest(BaseModel):
     min_p: float = min_p_field
     stop: Optional[Union[str, List[str]]] = stop_field
     stream: bool = stream_field
+    stream_options: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Options for streaming response. Only set this when you set stream: true.",
+    )
     presence_penalty: Optional[float] = presence_penalty_field
     frequency_penalty: Optional[float] = frequency_penalty_field
     logit_bias: Optional[Dict[str, float]] = Field(None)
