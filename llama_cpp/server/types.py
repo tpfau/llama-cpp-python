@@ -111,6 +111,10 @@ grammar = Field(
 )
 
 
+class StreamOptions(BaseModel):
+    include_usage: Optional[bool] = include_usage
+
+
 class CreateCompletionRequest(BaseModel):
     prompt: Union[str, List[str]] = Field(
         default="", description="The prompt to generate completions for."
@@ -133,7 +137,7 @@ class CreateCompletionRequest(BaseModel):
     stop: Optional[Union[str, List[str]]] = stop_field
     stream: bool = stream_field
 
-    stream_options: Optional[Dict[str, Any]] = Field(
+    stream_options: Optional[Union[StreamOptions, None]] = Field(
         default=None,
         description="Options for streaming response. Only set this when you set stream: true.",
     )
@@ -239,7 +243,7 @@ class CreateChatCompletionRequest(BaseModel):
     min_p: float = min_p_field
     stop: Optional[Union[str, List[str]]] = stop_field
     stream: bool = stream_field
-    stream_options: Optional[Dict[str, Any]] = Field(
+    stream_options: Optional[Union[StreamOptions, None]] = Field(
         default=None,
         description="Options for streaming response. Only set this when you set stream: true.",
     )

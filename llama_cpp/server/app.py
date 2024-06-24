@@ -89,9 +89,10 @@ def get_llama_proxy():
 
 _ping_message_factory = None
 
+
 def set_ping_message_factory(factory):
-   global  _ping_message_factory
-   _ping_message_factory = factory
+    global _ping_message_factory
+    _ping_message_factory = factory
 
 
 def create_app(
@@ -276,6 +277,7 @@ async def create_completion(
         "logit_bias_type",
         "user",
         "min_tokens",
+        "stream_options",
     }
     kwargs = body.model_dump(exclude=exclude)
 
@@ -285,6 +287,8 @@ async def create_completion(
             if body.logit_bias_type == "tokens"
             else body.logit_bias
         )
+    if body.stream_options is not None and body.stream_options.include_usage:
+        kwargs["stream_include_usage"] = body.stream_options.include_usage
 
     if body.grammar is not None:
         kwargs["grammar"] = llama_cpp.LlamaGrammar.from_string(body.grammar)
@@ -399,7 +403,7 @@ async def create_chat_completion(
                         {"role": "system", "content": "You are a helpful assistant."},
                         {"role": "user", "content": "Who won the world series in 2020"},
                     ],
-                    "response_format": { "type": "json_object" }
+                    "response_format": {"type": "json_object"},
                 },
             },
             "tool_calling": {
@@ -424,15 +428,15 @@ async def create_chat_completion(
                                     },
                                     "required": ["name", "age"],
                                 },
-                            }
+                            },
                         }
                     ],
                     "tool_choice": {
                         "type": "function",
                         "function": {
                             "name": "User",
-                        }
-                    }
+                        },
+                    },
                 },
             },
             "logprobs": {
@@ -444,7 +448,7 @@ async def create_chat_completion(
                         {"role": "user", "content": "What is the capital of France?"},
                     ],
                     "logprobs": True,
-                    "top_logprobs": 10
+                    "top_logprobs": 10,
                 },
             },
         }
@@ -456,8 +460,13 @@ async def create_chat_completion(
         "logit_bias_type",
         "user",
         "min_tokens",
+        "stream_options",
     }
     kwargs = body.model_dump(exclude=exclude)
+    
+    if body.stream_options is not None and body.stream_options.include_usage:        
+        kwargs["stream_include_usage"] = body.stream_options.include_usage
+
     llama = llama_proxy(body.model)
     if body.logit_bias is not None:
         kwargs["logit_bias"] = (
@@ -477,7 +486,7 @@ async def create_chat_completion(
             kwargs["logits_processor"] = _min_tokens_logits_processor
         else:
             kwargs["logits_processor"].extend(_min_tokens_logits_processor)
-
+    
     iterator_or_completion: Union[
         llama_cpp.ChatCompletion, Iterator[llama_cpp.ChatCompletionChunk]
     ] = await run_in_threadpool(llama.create_chat_completion, **kwargs)

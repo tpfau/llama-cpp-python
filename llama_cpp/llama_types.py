@@ -144,6 +144,7 @@ class CreateChatCompletionStreamResponse(TypedDict):
     object: Literal["chat.completion.chunk"]
     created: int
     choices: List[ChatCompletionStreamResponseChoice]
+    usage: Optional[Union[CompletionUsage, None]]
 
 
 class ChatCompletionFunctions(TypedDict):

@@ -992,9 +992,9 @@ class Llama:
                         "index": index,
                         "logprobs": logprobs_or_none,
                         "finish_reason": finish_reason,
-                        "usage": usage,
-                    }
+                    },
                 ],
+                "usage": usage,
             }
         else:
             token = {
@@ -1030,7 +1030,7 @@ class Llama:
         repeat_penalty: float = 1.1,
         top_k: int = 40,
         stream: bool = False,
-        stream_options: Optional[Dict[str, Any]] = None,
+        stream_include_usage: bool = False,
         seed: Optional[int] = None,
         tfs_z: float = 1.0,
         mirostat_mode: int = 0,
@@ -1219,14 +1219,9 @@ class Llama:
                 finish_reason = "stop"
                 break
 
-            if stream:                
-                include_usage = False
-                if stream_options is not None:
-                    if (
-                        "include_usage" in stream_options
-                        and stream_options["include_usage"]
-                    ):
-                        include_usage = True
+            if stream:
+
+                include_usage = stream_include_usage
                 remaining_tokens = completion_tokens[returned_tokens:]
                 remaining_text = self.detokenize(
                     remaining_tokens,
@@ -1320,7 +1315,7 @@ class Llama:
                             text=text,
                             finish_reason=None,
                             index=0,
-                            logprobs_or_none=logprobs_or_none,                            
+                            logprobs_or_none=logprobs_or_none,
                             include_usage=include_usage,
                         )
                 else:
@@ -1349,19 +1344,17 @@ class Llama:
                         ):
                             break
                         remaining_tokens = remaining_tokens[i:]
-                        returned_tokens += i                        
+                        returned_tokens += i
                         yield self._create_token(
+                            index=0,
+                            finish_reason=None,
                             completion_id=completion_id,
                             created=created,
                             model_name=model_name,
-                            token=token,
                             text=ts,
-                            prompt_tokens=prompt_tokens,
-                            completion_tokens=completion_tokens,
-                            returned_tokens=returned_tokens,
                             logprobs_or_none=None,
                             include_usage=include_usage,
-                            )                        
+                        )
 
             if len(completion_tokens) >= max_tokens:
                 text = self.detokenize(completion_tokens, prev_tokens=prompt_tokens)
@@ -1440,71 +1433,61 @@ class Llama:
                     if token_end_position == end - 1:
                         break
                     returned_tokens += 1
-                    text = last_text[:len(last_text) - (token_end_position - end)].decode("utf-8",errors="ignore")
-                    yield self._create_token(completion_id=completion_id,
-                                       created=created,
-                                       model_name=model_name,
-                                       text=text,
-                                       logprobs_or_none=logprobs_or_none,
-                                       include_usage=include_usage,
-                                       index=0,
-                                       finish_reason=None)
-                    yield {
-                        "id": completion_id,
-                        "object": "text_completion",
-                        "created": created,
-                        "model": model_name,
-                        "choices": [
-                            {
-                                "text": last_text[
-                                    : len(last_text) - (token_end_position - end)
-                                ].decode("utf-8", errors="ignore"),
-                                "index": 0,
-                                "logprobs": logprobs_or_none,
-                                "finish_reason": None,
-                            }
-                        ],
-                    }
+                    text = last_text[
+                        : len(last_text) - (token_end_position - end)
+                    ].decode("utf-8", errors="ignore")
+
+                    yield self._create_token(
+                        completion_id=completion_id,
+                        created=created,
+                        model_name=model_name,
+                        text=text,
+                        logprobs_or_none=logprobs_or_none,
+                        include_usage=include_usage,
+                        index=0,
+                        finish_reason=None,
+                    )
                     break
                 returned_tokens += 1
-                text = self.detokenize([token]).decode(
-                                "utf-8", errors="ignore"
-                            )
-                yield self._create_token(completion_id=completion_id,
-                                       created=created,
-                                       model_name=model_name,
-                                       text=text,
-                                       logprobs_or_none=logprobs_or_none,
-                                       include_usage=include_usage,
-                                       index=0,
-                                       finish_reason=None)
+                text = self.detokenize([token]).decode("utf-8", errors="ignore")
+                yield self._create_token(
+                    completion_id=completion_id,
+                    created=created,
+                    model_name=model_name,
+                    text=text,
+                    logprobs_or_none=logprobs_or_none,
+                    include_usage=include_usage,
+                    index=0,
+                    finish_reason=None,
+                )
+
+            yield self._create_token(
+                completion_id= completion_id,
+                created= created,
+                model_name=model_name,
+                text="",
+                index=0,
+                logprobs_or_none= None,
+                include_usage=include_usage,
+                usage=None,
+                finish_reason=finish_reason)              
+
             if include_usage:
-                yield self._create_token(completion_id=completion_id,
-                                         created=created,
-                                         model_name=model_name,
-                                         text="",
-                                         logprobs_or_none=None,
-                                         include_usage=include_usage,
-                                         index=0,
-                                         finish_reason=finish_reason,
-                                         usage={"prompt_tokens": len(prompt_tokens),
-                                                "completion_tokens": returned_tokens,
-                                                "total_tokens": len(prompt_tokens) + returned_tokens})              
-                
-            yield {
-                "id": completion_id,
-                "object": "text_completion",
-                "created": created,
-                "model": model_name,
-                "choices": [
-                    {
-                        "text": "",
-                        "index": 0,
-                        "logprobs": None,
-                        "finish_reason": finish_reason,
-                    }
-                ],
-            }
+                yield self._create_token(
+                    completion_id=completion_id,
+                    created=created,
+                    model_name=model_name,
+                    text="",
+                    logprobs_or_none=None,
+                    include_usage=include_usage,
+                    index=0,
+                    finish_reason=None,
+                    usage={
+                        "prompt_tokens": len(prompt_tokens),
+                        "completion_tokens": returned_tokens,
+                        "total_tokens": len(prompt_tokens) + returned_tokens,
+                    },
+                )
             if self.cache:
                 if self.verbose:
                     print("Llama._create_completion: cache save", file=sys.stderr)
@@ -1626,7 +1609,7 @@ class Llama:
         repeat_penalty: float = 1.1,
         top_k: int = 40,
         stream: bool = False,
-        stream_options: Optional[Dict[str, Any]] = None,
+        stream_include_usage: Optional[bool] = False,
         seed: Optional[int] = None,
         tfs_z: float = 1.0,
         mirostat_mode: int = 0,
@@ -1690,7 +1673,7 @@ class Llama:
             repeat_penalty=repeat_penalty,
             top_k=top_k,
             stream=stream,
-            stream_options=stream_options,
+            stream_include_usage=stream_include_usage,
             seed=seed,
             tfs_z=tfs_z,
             mirostat_mode=mirostat_mode,
@@ -1725,7 +1708,7 @@ class Llama:
         repeat_penalty: float = 1.1,
         top_k: int = 40,
         stream: bool = False,
-        stream_options: Optional[Dict[str, Any]] = None,
+        stream_include_usage: Optional[bool] = False,
         seed: Optional[int] = None,
         tfs_z: float = 1.0,
         mirostat_mode: int = 0,
@@ -1789,7 +1772,7 @@ class Llama:
             repeat_penalty=repeat_penalty,
             top_k=top_k,
             stream=stream,
-            stream_options=stream_options,
+            stream_include_usage=stream_include_usage,
             seed=seed,
             tfs_z=tfs_z,
             mirostat_mode=mirostat_mode,
@@ -1815,7 +1798,7 @@ class Llama:
         min_p: float = 0.05,
         typical_p: float = 1.0,
         stream: bool = False,
-        stream_options: Optional[Dict[str, Any]] = None,
+        stream_include_usage: Optional[bool] = False,
         stop: Optional[Union[str, List[str]]] = [],
         seed: Optional[int] = None,
         response_format: Optional[ChatCompletionRequestResponseFormat] = None,
@@ -1874,6 +1857,9 @@ class Llama:
             or self._chat_handlers.get(self.chat_format)
             or llama_chat_format.get_chat_completion_handler(self.chat_format)
         )
+        print("In llama:")
+        print(handler)
+        print(stream_include_usage)
         return handler(
             llama=self,
             messages=messages,
@@ -1889,7 +1875,7 @@ class Llama:
             logprobs=logprobs,
             top_logprobs=top_logprobs,
             stream=stream,
-            stream_options=stream_options,
+            stream_include_usage=stream_include_usage,
             stop=stop,
             seed=seed,
             response_format=response_format,
