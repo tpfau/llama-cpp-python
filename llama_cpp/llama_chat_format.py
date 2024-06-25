@@ -310,7 +310,7 @@ def _convert_text_completion_to_chat(
 
 def _convert_text_completion_chunks_to_chat(
     chunks: Iterator[llama_types.CreateCompletionStreamResponse],
-    stream_include_usage: Optional[bool] = False,v
+    stream_include_usage: Optional[bool] = False,
 ) -> Iterator[llama_types.ChatCompletionChunk]:
     for i, chunk in enumerate(chunks):
         if i == 0:
@@ -322,7 +322,7 @@ def _convert_text_completion_chunks_to_chat(
                     "role": "assistant",
                 },
                 logprobs_or_none=None,
-                include_usage=include_usage,
+                include_usage=stream_include_usage,
                 index=0,
                 finish_reason=None,
             )
@@ -338,7 +338,7 @@ def _convert_text_completion_chunks_to_chat(
                 else {}
             ),
             logprobs_or_none=chunk["choices"][0]["logprobs"],
-            include_usage=include_usage,
+            include_usage=stream_include_usage,
             index=0,
             finish_reason=chunk["choices"][0]["finish_reason"],
             usage=(chunk["usage"] if include_usage else None),
@@ -357,7 +357,7 @@ def _convert_completion_to_chat(
 ]:
     if stream:
         chunks: Iterator[llama_types.CreateCompletionStreamResponse] = completion_or_chunks  # type: ignore
-        return _convert_text_completion_chunks_to_chat(chunks)
+        return _convert_text_completion_chunks_to_chat(chunks, stream_include_usage=stream_include_usage)
     else:
         completion: llama_types.Completion = completion_or_chunks  # type: ignore
         return _convert_text_completion_to_chat(completion)
@@ -370,6 +370,7 @@ def _convert_completion_to_chat_function(
         Iterator[llama_types.CreateCompletionStreamResponse],
     ],
     stream: bool,
+    stream_include_usage: Optional[bool] = False,
 ):
     if not stream:
         completion: llama_types.CreateCompletionResponse = completion_or_chunks  # type: ignore
@@ -2070,7 +2071,7 @@ def functionary_v1_v2_chat_handler(
                             model_name=chunk["model"],
                             delta={"role": None, "content": None, **func_call_dict},
                             logprobs_or_none=None,
-                            include_usage=include_usage,
+                            include_usage=stream_include_usage,
                             index=0,
                             finish_reason=None,
                         )                        
@@ -2104,7 +2105,7 @@ def functionary_v1_v2_chat_handler(
                                     **func_call_dict,
                                 },
                             logprobs_or_none=chunk["choices"][0]["logprobs"],
-                            include_usage=include_usage,
+                            include_usage=stream_include_usage,
                             index=0,
                             finish_reason=None,
                         )                        
@@ -2119,9 +2120,9 @@ def functionary_v1_v2_chat_handler(
                             "role": None, "content": None, "function_call": None, "tool_calls": None
                         },
                         logprobs_or_none=None,
-                        include_usage=include_usage,
+                        include_usage=stream_include_usage,
                         index=0,
-                        finish_reason="tool_calls" if tools is not None else "function_call",,
+                        finish_reason="tool_calls" if tools is not None else "function_call",
                     )               
             )
         # If "auto" or no tool_choice/function_call
@@ -2150,7 +2151,7 @@ def functionary_v1_v2_chat_handler(
                             model_name=chunk["model"],
                             delta={"role": "assistant", "content": ""}
                             logprobs_or_none=None,
-                            include_usage=include_usage,
+                            include_usage=stream_include_usage,
                             index=0,
                             finish_reason=None,
                         )                                              
@@ -2184,7 +2185,7 @@ def functionary_v1_v2_chat_handler(
                                     **func_call_dict,
                             },
                             logprobs_or_none=chunk["choices"][0]["logprobs"],
-                            include_usage=include_usage,
+                            include_usage=stream_include_usage,
                             index=0,
                             finish_reason=None,
                         )                        
@@ -2213,7 +2214,7 @@ def functionary_v1_v2_chat_handler(
                                                     "role": "assistant", "content": buffer.pop(0)
                                             },
                                             logprobs_or_none=chunk["choices"][0]["logprobs"],
-                                            include_usage=include_usage,
+                                            include_usage=stream_include_usage,
                                             index=0,
                                             finish_reason=None,
                                         )                                        
@@ -2235,7 +2236,7 @@ def functionary_v1_v2_chat_handler(
                                             "content": chunk["choices"][0]["text"] if i > 0 else chunk["choices"][0]["text"].lstrip()
                                     },
                                     logprobs_or_none=chunk["choices"][0]["logprobs"],
-                                    include_usage=include_usage,
+                                    include_usage=stream_include_usage,
                                     index=0,
                                     finish_reason=None,
                                 )                                
@@ -2258,7 +2259,7 @@ def functionary_v1_v2_chat_handler(
                                 model_name=chunk["model"],
                                 delta={},
                                 logprobs_or_none=None,
-                                include_usage=include_usage,
+                                include_usage=stream_include_usage,
                                 index=0,
                                 finish_reason="stop",
                             )                            
@@ -2297,7 +2298,7 @@ def functionary_v1_v2_chat_handler(
                                             **func_call_dict,
                                     },
                                     logprobs_or_none=chunk["choices"][0]["logprobs"],
-                                    include_usage=include_usage,
+                                    include_usage=stream_include_usage,
                                     index=0,
                                     finish_reason=None,
                                 )                               
@@ -2320,7 +2321,7 @@ def functionary_v1_v2_chat_handler(
                                         "role": None, "content": None, "function_call": None, "tool_calls": None
                                 },
                                 logprobs_or_none=None,
-                                include_usage=include_usage,
+                                include_usage=stream_include_usage,
                                 index=0,
                                 finish_reason="tool_calls" if tools is not None else "function_call",
                             )                                                       
@@ -3432,7 +3433,7 @@ def chatml_function_calling(
         top_k=top_k,
         min_p=min_p,
         typical_p=typical_p,
-        stream=False,
+        stream=False,        
         stop=[":"],
         max_tokens=None,
         presence_penalty=presence_penalty,
