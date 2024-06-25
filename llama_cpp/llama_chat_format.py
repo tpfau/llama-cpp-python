@@ -2149,7 +2149,7 @@ def functionary_v1_v2_chat_handler(
                             completion_id="chat" + chunk_id,
                             created=chunk_created,
                             model_name=chunk["model"],
-                            delta={"role": "assistant", "content": ""}
+                            delta={"role": "assistant", "content": ""},
                             logprobs_or_none=None,
                             include_usage=stream_include_usage,
                             index=0,
